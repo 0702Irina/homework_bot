@@ -102,7 +102,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-/.env
+homework.env
 .env
 .venv
 env/

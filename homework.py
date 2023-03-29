@@ -17,7 +17,7 @@ TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 
 RETRY_PERIOD = 600
-ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
+ENDPOINT = os.getenv('URL')
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
 
@@ -28,19 +28,21 @@ HOMEWORK_VERDICTS = {
 }
 
 
-def init_logger() -> None:
-    """Настройки логирования."""
+def init_logger():
+    """Настройка логирования."""
     logging.basicConfig(
         level=logging.INFO,
         filename='homework.log',
         format='%(asctime)s, %(levelname)s, %(name)s, %(message)s'
     )
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+    handler = logging.StreamHandler(stream=sys.stdout)
+    logger.addHandler(handler)
+    return logger
 
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-handler = logging.StreamHandler(stream=sys.stdout)
-logger.addHandler(handler)
+logger = init_logger()
 
 
 def check_tokens() -> bool:
@@ -73,7 +75,7 @@ def get_api_answer(current_timestamp: int) -> dict:
     try:
         response = requests.get(**params_api)
         if response.status_code != HTTPStatus.OK:
-            raise logging.error(f'Ошибка {response.status_code}')
+            raise logger.error(f'Ошибка {response.status_code}')
         return response.json()
     except requests.exceptions.RequestException as error:
         logger.error(f'API Практикума не отвечает. {error}')
@@ -85,11 +87,11 @@ def check_response(response: dict) -> dict:
     try:
         homework = response['homeworks']
     except KeyError as error:
-        logging.error(f'Ошибка доступа по ключу homeworks: {error}')
+        logger.error(f'Ошибка доступа по ключу homeworks: {error}')
     if not isinstance(homework, list):
-        logging.error('Homeworks не в виде списка')
+        logger.error('Homeworks не в виде списка')
         raise TypeError('Homeworks не в виде списка')
-    if len(homework) <= 1:
+    if len(homework) <= 0:
         raise KeyError('Запрошенный ключ отсутствует в homework')
     return homework
 

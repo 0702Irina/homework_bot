@@ -61,9 +61,12 @@ def send_message(bot, message):
 def get_api_answer(current_timestamp):
     """Делает запрос к эндпоинту API-сервиса."""
     timestamp = current_timestamp or int(time.time())
-    params = {"from_date": timestamp}
+    context = {'from_date': timestamp}
+    params_api = {'url': ENDPOINT,
+                  'headers': HEADERS,
+                  'params': context}
     try:
-        response = requests.get(url=ENDPOINT, headers=HEADERS, params=params)
+        response = requests.get(**params_api)
         if response.status_code != HTTPStatus.OK:
             raise logging.error(f'Ошибка {response.status_code}')
         return response.json()
@@ -110,21 +113,15 @@ def main():
             response = get_api_answer(current_timestamp)
             homework = check_response(response)
             if not homework:
-                text = 'Обновлений нет'
+                message = 'Обновлений нет'
             else:
-                text = parse_status(homework[0])
+                message = parse_status(homework[0])
             current_timestamp = response['current_date']
-        except ReferenceError as error:
-            text = f'Ошибка: {error}'
-            logger.error(error)
-        except KeyError as error:
-            text = f'Ошибка: {error}'
-            logger.error(error)
-        except TypeError as error:
-            text = f'Ошибка: {error}'
+        except Exception as error:
+            message = f'Ошибка: {error}'
             logger.error(error)
         finally:
-            send_message(bot, text)
+            send_message(bot, message)
             time.sleep(RETRY_PERIOD)
 
 

@@ -17,7 +17,7 @@ TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 
 RETRY_PERIOD = 600
-ENDPOINT = os.getenv('URL')
+ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
 
@@ -27,18 +27,23 @@ HOMEWORK_VERDICTS = {
     'rejected': 'Работа проверена: у ревьюера есть замечания.'
 }
 
-logging.basicConfig(
-    level=logging.INFO,
-    filename='homework.log',
-    format='%(asctime)s, %(levelname)s, %(name)s, %(message)s'
-)
+
+def init_logger() -> None:
+    """Настройки логирования."""
+    logging.basicConfig(
+        level=logging.INFO,
+        filename='homework.log',
+        format='%(asctime)s, %(levelname)s, %(name)s, %(message)s'
+    )
+
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 handler = logging.StreamHandler(stream=sys.stdout)
 logger.addHandler(handler)
 
 
-def check_tokens():
+def check_tokens() -> bool:
     """Функция проверяет переменные окружения."""
     """При отсутствии одной из переменных выдается ошибка."""
     list_env = [
@@ -49,7 +54,7 @@ def check_tokens():
     return all(list_env)
 
 
-def send_message(bot, message):
+def send_message(bot: telegram.Bot, message: str) -> None:
     """Функция отправки сообщений."""
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
@@ -58,7 +63,7 @@ def send_message(bot, message):
         raise logger.error('Ошибка отправки сообщения в Telegramm') from error
 
 
-def get_api_answer(current_timestamp):
+def get_api_answer(current_timestamp: int) -> dict:
     """Делает запрос к эндпоинту API-сервиса."""
     timestamp = current_timestamp or int(time.time())
     context = {'from_date': timestamp}
@@ -75,7 +80,7 @@ def get_api_answer(current_timestamp):
         raise Exception(f'API Практикума не отвечает. {error}')
 
 
-def check_response(response):
+def check_response(response: dict) -> dict:
     """Проверяет соответствие ответа API документации."""
     try:
         homework = response['homeworks']
@@ -84,10 +89,12 @@ def check_response(response):
     if not isinstance(homework, list):
         logging.error('Homeworks не в виде списка')
         raise TypeError('Homeworks не в виде списка')
+    if len(homework) <= 1:
+        raise KeyError('Запрошенный ключ отсутствует в homework')
     return homework
 
 
-def parse_status(homework):
+def parse_status(homework: dict) -> dict:
     """Извлекает из конкретной домашней работе её статус."""
     if 'homework_name' not in homework:
         raise KeyError('Ключ homework_name отсутствует в homework')
@@ -101,7 +108,7 @@ def parse_status(homework):
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
-def main():
+def main() -> None:
     """Основная логика работы бота."""
     if not check_tokens():
         logger.critical('Ошибочный токен.')
